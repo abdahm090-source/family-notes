@@ -2,11 +2,10 @@ import streamlit as st
 import pandas as pd
 import os
 
-
 # إعدادات الواجهة
 st.set_page_config(page_title="مغسلة العائلة", page_icon="🧺", layout="centered")
 
-# تصميم الواجهة لتناسب الجوال واللغة العربية
+# تصميم الواجهة
 st.markdown("""
     <style>
     .main { text-align: right; direction: rtl; }
@@ -34,27 +33,32 @@ def save_item(name, item_type, count, service):
 
 # نموذج إضافة ملابس
 with st.expander("➕ إضافة أغراض للمغسلة", expanded=True):
-    # الخيارات المطلوبة
     family_members = ["دلول", "نصور", "عبود", "الوالدة"]
-    service_types = [
-        "غسيل وكوي عادي", 
-        "غسيل وكوي مستعجل", 
-        "كوي عادي", 
-        "كوي مستعجل"
-    ]
+    clothing_options = ["كفرول", "ثوب", "غترة", "مريول", "عباءة", "فستان", "غيره"]
+    service_types = ["غسيل وكوي عادي", "غسيل وكوي مستعجل", "كوي عادي", "كوي مستعجل"]
     
     name = st.selectbox("صاحب الملابس:", family_members)
-    item_type = st.text_input("وش الملابس؟ (مثلاً: ثياب، قمصان)")
+    
+    # خيارات الملابس
+    selected_clothing = st.selectbox("وش الملابس؟", clothing_options)
+    
+    # منطق "غيره": إذا اختار غيره، تظهر خانة نصية
+    final_clothing = ""
+    if selected_clothing == "غيره":
+        final_clothing = st.text_input("اكتب نوع الملابس الأخرى:")
+    else:
+        final_clothing = selected_clothing
+
     count = st.number_input("العدد:", min_value=1, step=1)
     service = st.radio("نوع الخدمة:", service_types)
     
     if st.button("إضافة إلى الكشف"):
-        if item_type:
-            save_item(name, item_type, count, service)
-            st.success(f"تمت إضافة ملابس {name}")
+        if final_clothing:
+            save_item(name, final_clothing, count, service)
+            st.success(f"تمت إضافة {final_clothing} لـ {name}")
             st.rerun()
         else:
-            st.error("يرجى كتابة نوع الملابس")
+            st.error("يرجى تحديد أو كتابة نوع الملابس")
 
 st.divider()
 
@@ -64,7 +68,6 @@ df = load_data()
 
 if not df.empty:
     for _, row in df.iterrows():
-        # تمييز المستعجل بلون مختلف
         is_urgent = "مستعجل" in row['نوع الخدمة']
         service_style = "class='urgent'" if is_urgent else ""
         
@@ -76,14 +79,14 @@ if not df.empty:
         </div>
         """, unsafe_allow_html=True)
     
-    st.write(f"**إجمالي القطع المودعة:** {df['العدد'].sum()}")
+    st.write(f"**إجمالي القطع:** {df['العدد'].sum()}")
     
     # ميزة الـ Restart
     st.divider()
     if st.button("🗑️ تم الاستلام والدفع (تصفير الكشف)"):
         if os.path.exists(DB_FILE):
             os.remove(DB_FILE)
-            st.success("تم تصفير الكشف. الله يعطيك العافية!")
+            st.success("تم تصفير الكشف بنجاح!")
             st.rerun()
 else:
-    st.info("لا توجد ملابس مسجلة حالياً.")
+    st.info("الكشف فارغ حالياً.")
