@@ -1,68 +1,69 @@
 import streamlit as st
 import pandas as pd
-from datetime import datetime
 import os
 
-# إعدادات الواجهة لتظهر بشكل احترافي
-st.set_page_config(page_title="ملاحظات العائلة", page_icon="🏠", layout="centered")
+# إعدادات الواجهة
+st.set_page_config(page_title="مغسلة العائلة", page_icon="🧺", layout="centered")
 
-# تصميم الواجهة باستخدام CSS بسيط لتحسين الخطوط والألوان
 st.markdown("""
     <style>
     .main { text-align: right; direction: rtl; }
-    .stButton>button { width: 100%; border-radius: 20px; background-color: #007bff; color: white; }
-    .note-card { padding: 15px; border-radius: 10px; border: 1px solid #444; margin-bottom: 10px; background-color: #1e1e1e; }
+    .stButton>button { width: 100%; border-radius: 10px; }
+    .laundry-card { padding: 15px; border-radius: 10px; border: 1px solid #eee; margin-bottom: 10px; background-color: #f9f9f9; color: #333; }
     </style>
     """, unsafe_allow_html=True)
 
-st.title("📝 مجلس العائلة الرقمي")
-st.write("اكتب ملاحظتك ليراها الجميع")
+st.title("🧺 كشف ملابس المغسلة")
 
-# قاعدة البيانات (ملف CSV)
-DB_FILE = "family_notes.csv"
+DB_FILE = "laundry_notes.csv"
 
-def load_notes():
+def load_data():
     if os.path.exists(DB_FILE):
         return pd.read_csv(DB_FILE)
-    return pd.DataFrame(columns=["التاريخ", "الاسم", "الملاحظة"])
+    return pd.DataFrame(columns=["الاسم", "نوع الملابس", "العدد"])
 
-def save_note(name, text):
-    df = load_notes()
-    new_note = {
-        "التاريخ": datetime.now().strftime("%Y-%m-%d %H:%M"),
-        "الاسم": name,
-        "الملاحظة": text
-    }
-    df = pd.concat([df, pd.DataFrame([new_note])], ignore_index=True)
+def save_item(name, item_type, count):
+    df = load_data()
+    new_entry = {"الاسم": name, "نوع الملابس": item_type, "العدد": count}
+    df = pd.concat([df, pd.DataFrame([new_entry])], ignore_index=True)
     df.to_csv(DB_FILE, index=False)
 
-# القسم الخاص بإضافة ملاحظة جديدة
-with st.expander("➕ أضف ملاحظة جديدة", expanded=True):
-    user_name = st.text_input("اسمك")
-    note_content = st.text_area("ماذا يدور في ذهنك؟")
-    if st.button("نشر الملاحظة"):
-        if user_name and note_content:
-            save_note(user_name, note_content)
-            st.success("تم النشر!")
-            st.rerun() # لإعادة تحديث الصفحة وعرض الملاحظة فوراً
-        else:
-            st.warning("يرجى ملء جميع الخانات")
+# نموذج إضافة ملابس
+with st.expander("➕ إضافة ملابس جديدة", expanded=True):
+    name = st.selectbox("من صاحب الملابس؟", ["أنا", "الوالد", "الوالدة", "أخي", "أختي"])
+    item_type = st.text_input("وش الملابس؟ (مثلاً: ثياب، قمصان، قطع)")
+    count = st.number_input("كم عددها؟", min_value=1, step=1)
+    
+    if st.button("إضافة للكشف"):
+        if item_type:
+            save_item(name, item_type, count)
+            st.success("تمت الإضافة")
+            st.rerun()
 
 st.divider()
 
-# عرض الملاحظات السابقة بتصميم "بطاقات"
-st.subheader("📌 آخر التحديثات")
-notes_df = load_notes()
+# عرض الكشف الحالي
+st.subheader("📋 الكشف الحالي")
+df = load_data()
 
-if not notes_df.empty:
-    # عرض الأحدث أولاً
-    for _, row in notes_df.iloc[::-1].iterrows():
+if not df.empty:
+    for _, row in df.iterrows():
         st.markdown(f"""
-        <div class="note-card">
-            <small style="color: #888;">{row['التاريخ']}</small><br>
-            <strong>👤 {row['الاسم']}:</strong>
-            <p style="margin-top: 5px;">{row['الملاحظة']}</p>
+        <div class="laundry-card">
+            <strong>👤 {row['الاسم']}</strong><br>
+            👔 {row['نوع الملابس']} : {row['العدد']} قطع
         </div>
         """, unsafe_allow_html=True)
+    
+    st.write(f"**إجمالي القطع:** {df['العدد'].sum()}")
+    
+    # ميزة الـ Restart (تصفير البيانات)
+    st.divider()
+    if st.button("🗑️ تم الدفع واستلام الملابس (تصفير الكشف)"):
+        # حذف الملف لعمل ريستارت
+        if os.path.exists(DB_FILE):
+            os.remove(DB_FILE)
+            st.success("تم تصفير الكشف بنجاح! جاهزون للأسبوع القادم.")
+            st.rerun()
 else:
-    st.info("لا توجد ملاحظات بعد. كن أول من يكتب!")
+    st.info("الكشف فارغ حالياً. لا توجد ملابس للمغسلة.")
