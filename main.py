@@ -2,6 +2,7 @@ import streamlit as st
 import pandas as pd
 import os
 
+
 # إعدادات الواجهة
 st.set_page_config(page_title="مغسلة العائلة", page_icon="🧺", layout="centered")
 
